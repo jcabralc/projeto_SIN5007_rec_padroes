@@ -7,7 +7,7 @@ Escola de Artes, Ciências e Humanidades da Universidade de São Paulo - EACH-US
 Programa de Pós-graduação em Sistemas de Informação Mestrado Acadêmico - PPGSI.
 
 ### Dataset utilizado: ###
-    [Cervical Cancer Risk Classification](https://www.kaggle.com/loveall/cervical-cancer-risk-classification)
+[Cervical Cancer Risk Classification](https://www.kaggle.com/loveall/cervical-cancer-risk-classification)
 
 ###  Grupo 4: ### 
     - Gabriel Fernando
