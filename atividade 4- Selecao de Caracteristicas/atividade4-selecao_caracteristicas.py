@@ -4,14 +4,13 @@ from sklearn import preprocessing
 from sklearn.neighbors import KNeighborsClassifier
 from branch_and_bound import BranchAndBound
 from mlxtend.feature_selection import SequentialFeatureSelector
-from ReliefF import ReliefF
+from skrebate import ReliefF
 import pymrmr
 
 ######## Load dataset
-dataset = pd.read_csv('dataset/kag_risk_factors_cervical_cancer.csv')
+dataset = pd.read_csv('../data/kag_risk_factors_cervical_cancer.csv')
 
 ######## Pre-processing
-global dataset
 # Replace ? by NAN
 dataset.replace('?', np.nan, inplace = True)
 # Converting features in numbers
@@ -37,26 +36,44 @@ dataset['STDs:AIDS'] = dataset['STDs:AIDS'].fillna(0)
 dataset['STDs:HIV'] = dataset['STDs:HIV'].fillna(0)
 dataset['STDs:Hepatitis B'] = dataset['STDs:Hepatitis B'].fillna(0)
 dataset['STDs:HPV'] = dataset['STDs:HPV'].fillna(0)
-# Normalization
-#minmax_scale = preprocessing.MinMaxScaler(feature_range=(0, 1))
-#features = minmax_scale.fit_transform(features)
-# Split features
+# Split into features and class
 features = dataset.iloc[:, 0:35]
 classe = dataset.iloc[:, 35]
-##############################################
+#########################################
 
 ######## Feature selection
 
 #### Branch and Bound
-branchndBound = BranchAndBound(features.values, classe.values)
-best_features = branchndBound.best_subspace(6) # Usar raiz quadrada da qtde de features
+# Biblioteca: branch-and-bound-feature-selection
+# Parametros: qtd de caracteristicas a ser selecionada (usar raiz quadrada do valor total do conjunto de caracteristicas)
+# Função criterio: medida de inconsistência (um subconjunto de caracteristicas é dado como inconsistente se possui valores iguais de diferentes classes)
+# Observacao: Encontra a melhor solução
+# Observacao: Tem uma performance melhor utilizando características discretas
+branchAndBound = BranchAndBound(features.values, classe.values)
+bestFeaturesBnB = branchAndBound.best_subspace(6)
+## Resultado
+# Caracteristicas selecionadas: Age, Number of sexual partners, First sexual intercourse, Num of pregnancies, Smokes, Smokes (years)
+# Tempo de execução: 55s
+# Observação: fez sentido a seleção dessas características como mais relevantes
+
+#### Relief F
+# Biblioteca: skrebate
+# Parametros: qtd decaracteristicas a ser selecionada; numero de neighbors (maior quantidade de neighbors resulta em uma acurácia maior, porém demora mais o processamento)
+# Função criterio: distancia euclideana entre neighbors
+# Observacao: Essa biblioteca nao utiliza o parametro M (numero de instancias aleatorias), pois utilizando-se todas as instancias obtem-se um resultado melhor
+relief = ReliefF(n_features_to_select=10, n_neighbors=200, verbose=True)
+bestFeaturesReliefF = relief.fit_transform(features.values, classe.values)
+## Resultado
+# Caracteristicas selecionadas: Hinselmann, Schiller, Citology, Age, Num of pregnances, Hormonal Contraceptives (years), First sexual intercourse, STDs (number), STDs, STDs: Number of diagnosys
+# Tempo de execução: 11.49 segundos
+# Observação: também fez sentido a seleção dessas características como mais relevantes
 
 #### Sequential Foward Selection (SFS) | Sequential Backward Selection (SBS) | Foward Backward (Plus L - take away R)
 knn = KNeighborsClassifier(n_neighbors=4)
 sfs = SequentialFeatureSelector(
-    knn, 
+    knn,
     k_features=6,
-    forward=False, 
+    forward=False,
     floating=False,
     verbose=1, # show logs (0,1,2)
     scoring='accuracy', # accuracy, f1, precision, recall, roc_auc
@@ -67,7 +84,3 @@ sfs.k_feature_idx_
 
 #### Minimal Redundance Maximum Redundance (MRMR)
 pymrmr.mRMR(features, 'MIQ', 10)
-
-#### Relief F
-relief = ReliefF(n_neighbors=10, n_features_to_keep=8)
-best_features = relief.fit_transform(features.values, classe.values)
