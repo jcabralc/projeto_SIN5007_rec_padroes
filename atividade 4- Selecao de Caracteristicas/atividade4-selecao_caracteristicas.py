@@ -96,9 +96,17 @@ classe_non_normalized = df_train_non_normalized.iloc[:, 35]
 branchAndBound = BranchAndBound(features_non_normalized.values, classe_non_normalized.values)
 bestFeaturesBnB = branchAndBound.best_subspace(6)
 ## Resultado
-# Caracteristicas selecionadas: Age, Number of sexual partners, First sexual intercourse, Num of pregnancies, Smokes, Smokes (years)
 # Tempo de execução: 55s
 # Observação: fez sentido a seleção dessas características como mais relevantes
+for col in range(len(bestFeaturesBnB)):
+    print(features_non_normalized.columns[col])
+# Caracteristicas selecionadas:
+# Age
+# Number of sexual partners
+# First sexual intercourse
+# Num of pregnancies
+# Smokes
+# Smokes (years)
 
 #### Relief F
 # Biblioteca: skrebate
@@ -106,10 +114,10 @@ bestFeaturesBnB = branchAndBound.best_subspace(6)
 # Função criterio: distancia euclideana entre neighbors
 # Observacao: Essa biblioteca nao utiliza o parametro M (numero de instancias aleatorias), pois utilizando-se todas as instancias obtem-se um resultado melhor
 relief = ReliefF(n_features_to_select=10, n_neighbors=200, verbose=True)
-bestFeaturesReliefF = relief.fit_transform(features_normalized.values, features_normalized.values)
+bestFeaturesReliefF = relief.fit_transform(features_normalized.values, classe_normalized.values)
 ## Resultado
 # Caracteristicas selecionadas: Hinselmann, Schiller, Citology, Age, Num of pregnances, Hormonal Contraceptives (years), First sexual intercourse, STDs (number), STDs, STDs: Number of diagnosys
-# Tempo de execução: 11.49 segundos
+# Tempo de execução: 30.77 segundos
 # Observação: também fez sentido a seleção dessas características como mais relevantes
 
 
