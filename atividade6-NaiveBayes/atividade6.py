@@ -2,11 +2,11 @@ import pandas as pd
 import numpy as np
 # Preprocessing
 from sklearn import preprocessing
-from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from imblearn.combine import SMOTETomek
 # Classifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import BernoulliNB
 # Stratified Cross Validation
 from sklearn.model_selection import StratifiedKFold
 # Metrics
@@ -14,199 +14,154 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 
-######## Load dataset
-dataset = pd.read_csv('../data/kag_risk_factors_cervical_cancer.csv')
+# 1) Listar todas as features categoricas e numericas (está faltando algumas)
+numeric_features = ['Number of sexual partners',
+                    'First sexual intercourse',
+                    'Num of pregnancies', 
+                    'Smokes (years)',
+                    'Smokes (packs/year)',
+                    'Hormonal Contraceptives (years)',
+                    'IUD (years)',
+                    'STDs (number)',
+                    'STDs: Time since first diagnosis',
+                    'STDs: Time since last diagnosis'] 
+cathegoric_features = ['Smokes',
+                'Hormonal Contraceptives',
+                'IUD',
+                'STDs',
+                'STDs:condylomatosis',
+                'STDs:cervical condylomatosis',
+                'STDs:vaginal condylomatosis',
+                'STDs:vulvo-perineal condylomatosis',
+                'STDs:syphilis',
+                'STDs:pelvic inflammatory disease',
+                'STDs:genital herpes',
+                'STDs:molluscum contagiosum',
+                'STDs:AIDS',
+                'STDs:HIV',
+                'STDs:Hepatitis B',
+                'STDs:HPV']
+
+# 2) Salvar os seguintes datasets: df_componentes_principais.csv, df_selecionador1.csv, df_selecionador2.csv
 
 ######## Pre-processing
-# Substitui ? by NAN
-dataset.replace('?', np.nan, inplace = True)
-# Transforma as feature em numericas
-dataset = dataset.apply(pd.to_numeric, errors="ignore")
+def preprocessing(dataset):
+    #### Datatypes
+    # Substitui ? by NAN
+    dataset.replace('?', np.nan, inplace = True)
+    # Transforma as feature em numericas
+    dataset = dataset.apply(pd.to_numeric, errors="ignore")
 
-# Split em Train e Test
-random_state = 5007
-X = dataset.drop('Biopsy', axis=1)
-Y = dataset['Biopsy']
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, shuffle=True, test_size = 0.25, random_state=random_state)
+    #### Inicializa variaveis
+    X = dataset.drop('Biopsy', axis=1)
+    Y = dataset['Biopsy']
 
-# Eliminação (ou não) de instâncias com missing values
-numeric_feat = ['Number of sexual partners',
-                   'First sexual intercourse',
-                   'Num of pregnancies', 
-                   'Smokes (years)',
-                   'Smokes (packs/year)',
-                   'Hormonal Contraceptives (years)',
-                   'IUD (years)',
-                   'STDs (number)',
-                   'STDs: Time since first diagnosis',
-                   'STDs: Time since last diagnosis'] 
-cathegoric_feat = ['Smokes',
-                 'Hormonal Contraceptives',
-                 'IUD',
-                 'STDs',
-                 'STDs:condylomatosis',
-                 'STDs:cervical condylomatosis',
-                 'STDs:vaginal condylomatosis',
-                 'STDs:vulvo-perineal condylomatosis',
-                 'STDs:syphilis',
-                 'STDs:pelvic inflammatory disease',
-                 'STDs:genital herpes',
-                 'STDs:molluscum contagiosum',
-                 'STDs:AIDS',
-                 'STDs:HIV',
-                 'STDs:Hepatitis B',
-                 'STDs:HPV']
-X_train_processed = X_train.copy()
-# Preenche com a mediana
-imp_median = SimpleImputer(missing_values = np.nan, strategy = 'median')
-X_train_processed[numeric_feat] = imp_median.fit_transform(X_train[numeric_feat])
-# Preenche com o valor mais frequente
-imp_most_freq = SimpleImputer(missing_values = np.nan, strategy = 'most_frequent')
-X_train_processed[cathegoric_feat] = imp_most_freq.fit_transform(X_train[cathegoric_feat])
+    #### Eliminação de instâncias com missing values
+    numeric_feat = ['Number of sexual partners',
+                    'First sexual intercourse',
+                    'Num of pregnancies', 
+                    'Smokes (years)',
+                    'Smokes (packs/year)',
+                    'Hormonal Contraceptives (years)',
+                    'IUD (years)',
+                    'STDs (number)',
+                    'STDs: Time since first diagnosis',
+                    'STDs: Time since last diagnosis'] 
+    cathegoric_feat = ['Smokes',
+                    'Hormonal Contraceptives',
+                    'IUD',
+                    'STDs',
+                    'STDs:condylomatosis',
+                    'STDs:cervical condylomatosis',
+                    'STDs:vaginal condylomatosis',
+                    'STDs:vulvo-perineal condylomatosis',
+                    'STDs:syphilis',
+                    'STDs:pelvic inflammatory disease',
+                    'STDs:genital herpes',
+                    'STDs:molluscum contagiosum',
+                    'STDs:AIDS',
+                    'STDs:HIV',
+                    'STDs:Hepatitis B',
+                    'STDs:HPV']
+    X_processed = X.copy()
+    # Preenche com a mediana
+    imp_median = SimpleImputer(missing_values = np.nan, strategy = 'median')
+    X_processed[numeric_feat] = imp_median.fit_transform(X[numeric_feat])
+    # Preenche com o valor mais frequente
+    imp_most_freq = SimpleImputer(missing_values = np.nan, strategy = 'most_frequent')
+    X_processed[cathegoric_feat] = imp_most_freq.fit_transform(X[cathegoric_feat])
+
+    #### Retorna variaveis
+    return X_processed, Y
 #########################################
 
-X = X_train_processed
-Y = Y_train
 
-######## Naive Bayes
-classifier = GaussianNB()
-classifier.fit(X_train_processed.values, Y_train.values)
+######## Naive Bayes Cross Validation
 
-######## Stratified Cross Validation
-random_state = 5007
-k = 4
-
-stratified_k_fold(X, Y, k, random_state)
-stratified_k_fold_SMOTE(X, Y, k, random_state)
-
-def stratified_k_fold(X, Y, k, random_state, shuffle=False):
-    # Quantidade original de classes
-    count_classes = Y.value_counts()
-    
-    skf = StratifiedKFold(n_splits=k, shuffle=False, random_state=random_state)
-    print('k = {}, Dataset {} positivas e {} negativas ({:.2f}% x {:.2f}%)'.format(k, count_classes[0], 
-                                                                                      count_classes[1], 
-                                                                                      ((count_classes[0]/len(Y))*100), 
-                                                                                      ((count_classes[1]/len(Y))*100)))
-
-    for fold in enumerate(skf.split(X, Y)):
-        fold_number = fold[0] + 1
-        train_index = fold[1][0]
-        test_index = fold[1][1]
-        # Quantidade de classes dentro da fold
-        count_classes_fold = Y.iloc[test_index].value_counts()
-        # Proporções
-        prop_pos = ((count_classes_fold[0]/count_classes_fold.sum())*100)
-        prop_neg = ((count_classes_fold[1]/count_classes_fold.sum())*100)
-        print('Fold {}: Pos: {}, Neg: {}, Total: {}, Proporção: {:.2f}% x {:.2f}%'.format(fold_number, 
-                                                                            count_classes_fold[0],
-                                                                            count_classes_fold[1], 
-                                                                            count_classes_fold.sum(),
-                                                                            prop_pos, prop_neg))
-
-def stratified_k_fold_SMOTE(X, Y, k, random_state, shuffle=False):
-    # Quantidade original de classes
-    count_classes = Y.value_counts()
-    
-    skf = StratifiedKFold(n_splits=k, shuffle=False, random_state=random_state)
-    print('k = {}, Dataset {} positivas e {} negativas ({:.2f}% x {:.2f}%)'.format(k, count_classes[0], 
-                                                                                      count_classes[1], 
-                                                                                      ((count_classes[0]/len(Y))*100), 
-                                                                                      ((count_classes[1]/len(Y))*100)))
-    cc = SMOTETomek(random_state=random_state)
-
-    for fold, (train_index, test_index) in enumerate(skf.split(X, Y), 1):
-        fold_number = fold
-        X_train, Y_train = X.iloc[train_index], Y.iloc[train_index]
-        X_test, Y_test = X.iloc[test_index], Y.iloc[test_index]
-
-        # SMOTETomek
-        X_train, Y_train = cc.fit_resample(X_train, Y_train)
-
-        # Quantidade de classes dentro da fold
-        count_classes_fold = Y_test.value_counts()
-        
-        print('Fold {}, Dataset (balanceado) {} positivas e {} negativas ({:.2f}% x {:.2f}%)'.format(fold_number, 
-                                                                                 Y_train.value_counts()[0], 
-                                                                                 Y_train.value_counts()[1], 
-                                                                                 ((Y_train.value_counts()[0]/len(Y_train))*100), 
-                                                                                 ((Y_train.value_counts()[1]/len(Y_train))*100)))
-        
-        # Proporcoes
-        prop_pos = ((count_classes_fold[0]/count_classes_fold.sum())*100)
-        prop_neg = ((count_classes_fold[1]/count_classes_fold.sum())*100)
-        print('\tPos: {}, Neg: {}, Total: {}, Proporção: {:.2f}% x {:.2f}%'.format(fold_number, 
-                                                                            count_classes_fold[0],
-                                                                            count_classes_fold[1], 
-                                                                            count_classes_fold.sum(),
-                                                                            prop_pos, prop_neg))
-
-
-
-
-######################################
-
-c = [0.1, 0.5, 1]
+datasets = [] ## Lista de datasets
+alpha = [0.1, 0.5, 1]
 k = 4
 
 # Para cada dataset
+for dataset in datasets:
 
-# Dataset
-X = dataset.iloc[:, 0:35].values
-Y = dataset.iloc[:, 35].values
+    X, Y = preprocessing(dataset)
 
-acuracia = [[0 for item in range(k)] for item in range(len(c))]
-precisao = [[0 for item in range(k)] for item in range(len(c))]
-revocacao = [[0 for item in range(k)] for item in range(len(c))]
-acuracia_media = [[0 for item in range(k)] for item in range(len(c))]
-precisao_media = [[0 for item in range(k)] for item in range(len(c))]
-revocacao_media = [[0 for item in range(k)] for item in range(len(c))]
+    acuracia = [[0 for item in range(k)] for item in range(len(alpha))]
+    precisao = [[0 for item in range(k)] for item in range(len(alpha))]
+    revocacao = [[0 for item in range(k)] for item in range(len(alpha))]
+    acuracia_media = [[0 for item in range(k)] for item in range(len(alpha))]
+    precisao_media = [[0 for item in range(k)] for item in range(len(alpha))]
+    revocacao_media = [[0 for item in range(k)] for item in range(len(alpha))]
 
-# Divide o dataset em K folds
-skf = StratifiedKFold(n_splits=k, shuffle=True)
-
-# Para cada fold
-i_fold = 0
-for train_index, test_index in skf.split(X, Y):
-
-    X_train, X_test = X[train_index], X[test_index]
-    Y_train, Y_test = Y[train_index], Y[test_index]
-
-    # Para cada valor de c
-    for c_param in range(len(c)):
-        #classifier = GaussianNB(var_smoothing=c_param)
-        # Treinar classificador
-        #classifier.fit(X_train, Y_train)
-        # Testar classificador
-        Y_pred = Y_train
-        # Calcular metricas
-        acuracia[c_param][i_fold] += accuracy_score(Y_train, Y_pred)
-        precisao[c_param][i_fold] += precision_score(Y_train, Y_pred)
-        revocacao[c_param][i_fold] += recall_score(Y_train, Y_pred)
-        
-    i_fold += 1
-
-# Para cada valor de c
-for c_param in range(len(c)):
-    acuracia_media[c_param] = sum(acuracia[c_param]) / k
-    precisao_media[c_param] = sum(precisao_media[c_param]) / k
-    revocacao_media[c_param] = sum(revocacao_media[c_param]) / k
-
-
-
-
-# Para cada dataset
     # Divide o dataset em K folds
-    
+    skf = StratifiedKFold(n_splits=k, shuffle=True)
+
     # Para cada fold
-        # Acuracia[c], Precisao[c], Revocao[c] = 0
+    i_fold = 0
+    for train_index, test_index in skf.split(X, Y):
+
+        X_train, X_test = X[train_index], X[test_index]
+        Y_train, Y_test = Y[train_index], Y[test_index]
+
         # Para cada valor de c
-            # Treinar classificador com os outros folds
-            # Fazer a classificacao de teste com o fold atual
-            # Calcular acuracia, revocacao e precisao
-        # Acuracia[c], Precisao[c], Revocao[c]
-    
+        for alpha_param in range(len(alpha)):
+            classifier_gnb = GaussianNB(var_smoothing=alpha_param)
+            classifier_bnb = BernoulliNB(alpha=alpha_param)
+            
+            # Treinar classificador numerico
+            Y_pred_gnb = classifier_gnb.fit(X_train[numeric_features], Y_train)
+            
+            # Treinar classificador categorico
+            Y_pred_bnb = classifier_bnb.fit(X_train[cathegoric_features], Y_train)
+
+            # Obter probabilidades
+            X_probs = pd.DataFrame(
+                            np.hstack((
+                                Y_pred_gnb.predict_proba(X_train[numeric_features]), 
+                                Y_pred_bnb.predict_proba(X_train[cathegoric_features]))),
+                            columns = ['0_G','1_G','0_B','1_B'])    
+            X_probs_test = pd.DataFrame(
+                            np.hstack((
+                                Y_pred_gnb.predict_proba(X_test[numeric_features]), 
+                                Y_pred_bnb.predict_proba(X_test[cathegoric_features]))), 
+                            columns = ['0_G','1_G','0_B','1_B'])
+            
+            # Treinar classificador com as probabilidades
+            Y_pred = classifier_gnb.fit(X_probs, Y_train).predict(X_probs_test)
+            
+            # Calcular metricas
+            acuracia[alpha_param][i_fold] += accuracy_score(Y_test, Y_pred)
+            precisao[alpha_param][i_fold] += precision_score(Y_test, Y_pred)
+            revocacao[alpha_param][i_fold] += recall_score(Y_test, Y_pred)
+            
+        i_fold += 1
+
     # Para cada valor de c
-        # Acuracia[c] = Acuracia[c] / tamanho de K
-        # Precisao[c] = Precisao[c] / tamanho de K
-        # Revocao[c] = Revocao[c] / tamanho de K
+    for alpha_param in range(len(alpha)):
+        acuracia_media[alpha_param] = sum(acuracia[alpha_param]) / k
+        precisao_media[alpha_param] = sum(precisao_media[alpha_param]) / k
+        revocacao_media[alpha_param] = sum(revocacao_media[alpha_param]) / k
+
+######## Naive Bayes Cross Validation (Com balanceamento)
+# ...
