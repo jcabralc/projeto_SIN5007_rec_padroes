@@ -92,7 +92,7 @@ def preprocessing(dataset):
     X_processed[cathegoric_feat] = imp_most_freq.fit_transform(X[cathegoric_feat])
 
     #### Retorna variaveis
-    return X_processed, Y
+    return X_processed.values, Y.values
 #########################################
 
 
@@ -104,6 +104,8 @@ k = 4
 
 # Para cada dataset
 for dataset in datasets:
+
+    dataset = pd.read_csv('../data/kag_risk_factors_cervical_cancer.csv')
 
     X, Y = preprocessing(dataset)
 
