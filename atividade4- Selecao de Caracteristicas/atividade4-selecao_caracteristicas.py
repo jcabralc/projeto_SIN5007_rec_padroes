@@ -98,15 +98,16 @@ bestFeaturesBnB = branchAndBound.best_subspace(6)
 ## Resultado
 # Tempo de execução: 55s
 # Observação: fez sentido a seleção dessas características como mais relevantes
-for col in range(len(bestFeaturesBnB)):
-    print(features_non_normalized.columns[col])
+#for col in range(len(bestFeaturesBnB)):
+#    print(features_non_normalized.columns[col])
+features_non_normalized.columns[bestFeaturesBnB]
 # Caracteristicas selecionadas:
 # Age
 # Number of sexual partners
 # First sexual intercourse
 # Num of pregnancies
-# Smokes
-# Smokes (years)
+# Hormonal Contraceptives (years)
+# Hinselmann
 
 #### Relief F
 # Biblioteca: skrebate
